@@ -4,13 +4,13 @@ call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary
 echo Swtich to x64 build env
 cd %~dp0\luajit-2.1.0b3\src
 call msvcbuild_mt.bat gc64 static
-cd ..\..
+cd ..\..\..\src\xLua.Native\..
 
-mkdir build_lj64 & pushd build_lj64
-cmake -DUSING_LUAJIT=ON -DGC64=ON -G "Visual Studio 15 2017 Win64" ..
-IF %ERRORLEVEL% NEQ 0 cmake -DUSING_LUAJIT=ON -DGC64=ON -G "Visual Studio 15 2017 Win64" ..
+mkdir ..\build\intermediates\build_lj64 & pushd ..\build\intermediates\build_lj64
+cmake -DUSING_LUAJIT=ON -DGC64=ON -G "Visual Studio 15 2017 Win64" ..\..\..\src\xLua.Native
+IF %ERRORLEVEL% NEQ 0 cmake -DUSING_LUAJIT=ON -DGC64=ON -G "Visual Studio 15 2017 Win64" ..\..\..\src\xLua.Native
 popd
-cmake --build build_lj64 --config Release
-md plugin_luajit\Plugins\x86_64
-copy /Y build_lj64\Release\xlua.dll plugin_luajit\Plugins\x86_64\xlua.dll
+cmake --build ..\build\intermediates\build_lj64 --config Release
+md ..\build\plugin_luajit\Plugins\x86_64
+copy /Y ..\build\intermediates\build_lj64\Release\xlua.dll ..\build\plugin_luajit\Plugins\x86_64\xlua.dll
 pause

@@ -32,9 +32,12 @@ namespace XLua
 
         protected int errorFuncRef;
 
+        protected RealStatePtr rawL;
+
         public DelegateBridgeBase(int reference, LuaEnv luaenv) : base(reference, luaenv)
         {
             errorFuncRef = luaenv.errorFuncRef;
+            rawL = luaenv.rawL;
         }
 
         public bool TryGetDelegate(Type key, out Delegate value)
@@ -127,7 +130,7 @@ namespace XLua
     {
         internal static DelegateBridge[] DelegateBridgeList = new DelegateBridge[0];
 
-        public static bool Gen_Flag = false;
+        public static bool Gen_Flag { get { return InternalGlobals.Gen_Flag; } }
 
         public DelegateBridge(int reference, LuaEnv luaenv) : base(reference, luaenv)
         {

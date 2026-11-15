@@ -73,7 +73,9 @@ namespace XLua
             lock(luaEnvLock)
 #endif
             {
-                InternalGlobals.Init();
+#if XLUA_GENERAL
+                GenRegistry.EnsureRegistered();
+#endif
                 LuaIndexes.LUA_REGISTRYINDEX = LuaAPI.xlua_get_registry_index();
 #if GEN_CODE_MINIMIZE
                 LuaAPI.xlua_set_csharp_wrapper_caller(InternalGlobals.CSharpWrapperCallerPtr);

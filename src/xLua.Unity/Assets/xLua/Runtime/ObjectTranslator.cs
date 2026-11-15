@@ -258,7 +258,7 @@ namespace XLua
             initCSharpCallLua();
         }
 
-        Type delegate_birdge_type;
+        GenRegistry.DelegateBridgeCreator delegate_bridge_creator;
 
 #if (UNITY_EDITOR || XLUA_GENERAL) && !NET_STANDARD_2_0
         class CompareByArgRet : IEqualityComparer<MethodInfo>
@@ -282,13 +282,10 @@ namespace XLua
 
         void initCSharpCallLua()
         {
-            if (DelegateBridge.Gen_Flag)
+            delegate_bridge_creator = GenRegistry.delegateBridgeCreator;
+            if (delegate_bridge_creator == null)
             {
-                delegate_birdge_type = InternalGlobals.delegate_birdge_type;
-            }
-            else
-            {
-                delegate_birdge_type = typeof(DelegateBridge);
+                delegate_bridge_creator = (reference, luaenv) => new DelegateBridge(reference, luaenv);
 #if (UNITY_EDITOR || XLUA_GENERAL) && !NET_STANDARD_2_0
                 List<Type> cs_call_lua = new List<Type>();
                 foreach (var type in Utils.GetAllTypes())
@@ -326,7 +323,8 @@ namespace XLua
                                select type).GroupBy(t => t.GetMethod("Invoke"), new CompareByArgRet());
 
                 ce.SetGenInterfaces(cs_call_lua.Where(type=>type.IsInterface()).ToList());
-                delegate_birdge_type = ce.EmitDelegateImpl(groups);
+                Type delegate_birdge_type = ce.EmitDelegateImpl(groups);
+                delegate_bridge_creator = (reference, luaenv) => Activator.CreateInstance(delegate_birdge_type, new object[] { reference, luaenv }) as DelegateBridgeBase;
 #endif
             }
         }
@@ -501,7 +499,7 @@ namespace XLua
             DelegateBridgeBase bridge;
             try
             {
-                bridge = Activator.CreateInstance(delegate_birdge_type, new object[] { reference, luaEnv }) as DelegateBridgeBase;
+                bridge = delegate_bridge_creator(reference, luaEnv);
             }
             catch(Exception e)
             {

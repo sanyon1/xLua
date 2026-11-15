@@ -1720,8 +1720,7 @@ namespace XLua
                 }
             }
 
-            var genCodeAssemblyPathInProject = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                                       select assembly.GetType("XLua.DelegateBridge_Wrap")).FirstOrDefault(x => x != null).Module.FullyQualifiedName;
+            var genCodeAssemblyPathInProject = GenRegistry.GenAssembly.ManifestModule.FullyQualifiedName;
             var genCodeAssemblyFileName = Path.GetFileName(genCodeAssemblyPathInProject);
             var genCodeAssemblyPath = Path.Combine(assemblyDir, genCodeAssemblyFileName);
             List< string> args = new List<string>() { assembly_csharp_path, 

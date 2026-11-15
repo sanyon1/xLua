@@ -84,7 +84,10 @@ namespace XLua.CSObjectWrap
 
 namespace XLua
 {
-	internal partial class InternalGlobals_Gen
+#if !XLUA_GENERAL
+	[UnityEngine.Scripting.Preserve]
+#endif
+	public static class XLuaGenRegister
     {
 	    <%
 		local type_to_methods = {}
@@ -102,16 +105,21 @@ namespace XLua
 		%><%if pi ~= 0 then%>, <%end%><%if parameter.IsOut then %>out <% elseif parameter.ParameterType.IsByRef then %>ref <% end %> <%=CsFullTypeName(parameter.ParameterType)%> <%=parameter.Name%><%
 		end)%>);
 		<%end)%>
-        private delegate bool TryArrayGet(Type type, RealStatePtr L, ObjectTranslator translator, object obj, int index);
-        private delegate bool TryArraySet(Type type, RealStatePtr L, ObjectTranslator translator, object obj, int array_idx, int obj_idx);
-	    private static void Init(
-            out Dictionary<Type, IEnumerable<MethodInfo>> extensionMethodMap,
-            out TryArrayGet genTryArrayGetPtr,
-            out TryArraySet genTryArraySetPtr)
+		// Nothing references the generated assembly, so the engine has to call this. Hosts that
+		// create a LuaEnv earlier than that can call it themselves; a second call does nothing.
+#if !XLUA_GENERAL
+#if UNITY_2019_2_OR_NEWER
+		[UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+#else
+		[UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
+#endif
+#if UNITY_EDITOR
+		[UnityEditor.InitializeOnLoadMethod]
+#endif
+#endif
+	    public static void Register()
 		{
-            XLua.LuaEnv.AddIniter(XLua.CSObjectWrap.XLua_Gen_Initer_Register__.Init);
-            XLua.LuaEnv.AddIniter(XLua.ObjectTranslator_Gen.Init);
-		    extensionMethodMap = new Dictionary<Type, IEnumerable<MethodInfo>>()
+		    var extensionMethodMap = new Dictionary<Type, IEnumerable<MethodInfo>>()
 			{
 			    <%for _, methods_info in ipairs(seq_tbl) do%>
 				{typeof(<%=CsFullTypeName(methods_info.type)%>), new List<MethodInfo>(){
@@ -127,8 +135,13 @@ namespace XLua
 				<%end%>
 			};
 			
-            genTryArrayGetPtr = StaticLuaCallbacks_Wrap.__tryArrayGet;
-            genTryArraySetPtr = StaticLuaCallbacks_Wrap.__tryArraySet;
+            XLua.GenRegistry.Register(
+                (reference, luaenv) => new XLua.DelegateBridge_Wrap(reference, luaenv),
+                extensionMethodMap,
+                StaticLuaCallbacks_Wrap.__tryArrayGet,
+                StaticLuaCallbacks_Wrap.__tryArraySet,
+                XLua.CSObjectWrap.XLua_Gen_Initer_Register__.Init,
+                XLua.ObjectTranslator_Gen.Init);
 		}
 	}
 }

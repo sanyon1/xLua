@@ -1,0 +1,17 @@
+{
+  "name": "com.sanyoni.xlua",
+  "version": "2.1.16",
+  "displayName": "xLua",
+  "description": "Lua programming solution for C#. Fork of Tencent/xLua packaged for the Unity Package Manager, with generated code compiled outside the XLua assembly.",
+  "unity": "2019.4",
+  "license": "MIT",
+  "keywords": [
+    "lua",
+    "scripting",
+    "hotfix"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sanyon1/xLua.git"
+  }
+}

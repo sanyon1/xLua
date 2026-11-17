@@ -258,7 +258,7 @@ namespace XLua
             initCSharpCallLua();
         }
 
-        GenRegistry.DelegateBridgeCreator delegate_bridge_creator;
+        Func<int, LuaEnv, DelegateBridgeBase> delegate_bridge_creator;
 
 #if (UNITY_EDITOR || XLUA_GENERAL) && !NET_STANDARD_2_0
         class CompareByArgRet : IEqualityComparer<MethodInfo>
@@ -282,10 +282,9 @@ namespace XLua
 
         void initCSharpCallLua()
         {
-            delegate_bridge_creator = GenRegistry.delegateBridgeCreator;
-            if (delegate_bridge_creator == null)
+            delegate_bridge_creator = (reference, luaenv) => new DelegateBridge(reference, luaenv);
+            if (!DelegateBridge.Gen_Flag)
             {
-                delegate_bridge_creator = (reference, luaenv) => new DelegateBridge(reference, luaenv);
 #if (UNITY_EDITOR || XLUA_GENERAL) && !NET_STANDARD_2_0
                 List<Type> cs_call_lua = new List<Type>();
                 foreach (var type in Utils.GetAllTypes())
@@ -425,8 +424,18 @@ namespace XLua
             {
                 // get by parameters
                 MethodInfo delegateMethod = delegateType.GetMethod("Invoke");
+                MethodInfo generatedMethod = GenRegistry.FindBridgeMethod(delegateMethod);
+                if (generatedMethod != null)
+                {
+                    delegateCreator = (o) =>
+#if !UNITY_WSA || UNITY_EDITOR
+                        Delegate.CreateDelegate(delegateType, o, generatedMethod);
+#else
+                        generatedMethod.CreateDelegate(delegateType, o);
+#endif
+                }
                 var methods = bridge.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(m => !m.IsGenericMethodDefinition && (m.Name.StartsWith("__Gen_Delegate_Imp") || m.Name == "Action")).ToArray();
-                for (int i = 0; i < methods.Length; i++)
+                for (int i = 0; delegateCreator == null && i < methods.Length; i++)
                 {
                     if (!methods[i].IsConstructor && Utils.IsParamsMatch(delegateMethod, methods[i]))
                     {

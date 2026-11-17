@@ -136,6 +136,17 @@ namespace XLua
         {
         }
 
+        // What the generated bridge functions need; they are static and live in other assemblies.
+        public RealStatePtr RawL { get { return rawL; } }
+        public int ErrorFuncRef { get { return errorFuncRef; } }
+        public int LuaReference { get { return luaReference; } }
+        public LuaEnv Env { get { return luaEnv; } }
+
+        public override Delegate GetDelegateByType(Type type)
+        {
+            return GenRegistry.CreateDelegate(this, type);
+        }
+
         public void PCall(IntPtr L, int nArgs, int nResults, int errFunc)
         {
             if (LuaAPI.lua_pcall(L, nArgs, nResults, errFunc) != 0)

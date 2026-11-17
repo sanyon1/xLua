@@ -260,7 +260,6 @@ namespace XLua
     {
         private TypeReference objType = null;
         private TypeReference delegateBridgeType = null;
-        private TypeReference delegateBridgeWrapType = null;
         private AssemblyDefinition injectAssembly = null;
 
         private MethodReference delegateBridgeGetter = null;
@@ -283,18 +282,19 @@ namespace XLua
 
         private int delegateId = 0;
 
-        public void Init(AssemblyDefinition injectAssembly, AssemblyDefinition xluaAssembly, AssemblyDefinition genAssembly, IEnumerable<string> searchDirectorys, Dictionary<string, int> hotfixCfg)
+        public void Init(AssemblyDefinition injectAssembly, AssemblyDefinition xluaAssembly, IEnumerable<AssemblyDefinition> genAssemblies, IEnumerable<string> searchDirectorys, Dictionary<string, int> hotfixCfg)
         {
-            isInjectAndGenTheSameAssembly = injectAssembly == genAssembly;
+            // Bridge functions are static and per assembly. The ones in the assembly being injected can be
+            // called directly; those of other assemblies only tell which signatures the runtime can adapt.
+            var ownBridgeHolder = injectAssembly.MainModule.Types.SingleOrDefault(t => t.FullName == "XLua.DelegateBridge_Wrap");
+            isInjectAndGenTheSameAssembly = ownBridgeHolder != null;
             this.injectAssembly = injectAssembly;
             this.hotfixCfg = hotfixCfg;
             var injectModule = injectAssembly.MainModule;
             objType = injectModule.TypeSystem.Object;
 
             var delegateBridgeTypeDef = xluaAssembly.MainModule.Types.Single(t => t.FullName == "XLua.DelegateBridge");
-            var delegateBridgeTypeWrapDef = genAssembly.MainModule.Types.SingleOrDefault(t => t.FullName == "XLua.DelegateBridge_Wrap");
             delegateBridgeType = injectModule.TryImport(delegateBridgeTypeDef);
-            delegateBridgeWrapType = injectModule.TryImport(delegateBridgeTypeWrapDef);
             delegateBridgeGetter = injectModule.TryImport(xluaAssembly.MainModule.Types.Single(t => t.FullName == "XLua.HotfixDelegateBridge")
                 .Methods.Single(m => m.Name == "Get"));
             hotfixFlagGetter = injectModule.TryImport(xluaAssembly.MainModule.Types.Single(t => t.FullName == "XLua.HotfixDelegateBridge")
@@ -309,8 +309,12 @@ namespace XLua
             inParams = injectModule.TryImport(delegateBridgeTypeDef.Methods.Single(m => m.Name == "InParams"));
             outParam = injectModule.TryImport(delegateBridgeTypeDef.Methods.Single(m => m.Name == "OutParam"));
 
-            hotfixBridgesDef = (from method in (delegateBridgeTypeWrapDef ?? delegateBridgeTypeDef).Methods
-                              where method.Name.StartsWith("__Gen_Delegate_Imp")
+            var bridgeHolders = ownBridgeHolder != null ? new List<TypeDefinition>() { ownBridgeHolder }
+                : (from genAssembly in genAssemblies
+                   select genAssembly.MainModule.Types.SingleOrDefault(t => t.FullName == "XLua.DelegateBridge_Wrap")).Where(t => t != null).ToList();
+            hotfixBridgesDef = (from holder in bridgeHolders
+                              from method in holder.Methods
+                              where method.IsStatic && method.Name.StartsWith("__Gen_Delegate_Imp")
                               select method).ToList();
             hotfixBridgeToDelegate = new Dictionary<MethodDefinition, MethodDefinition>();
             delegateId = 0;
@@ -503,7 +507,8 @@ namespace XLua
                 var returnType = method.ReturnType;
                 if (isSameType(returnType, hotfixBridgeDef.ReturnType))
                 {
-                    var parametersOfDelegate = hotfixBridgeDef.Parameters;
+                    // the first parameter of a bridge function is the bridge itself
+                    var parametersOfDelegate = hotfixBridgeDef.Parameters.Skip(1).ToList();
                     int compareOffset = 0;
                     if (!method.IsStatic)
                     {
@@ -853,11 +858,12 @@ namespace XLua
 #endif
         }
 
-        public static void HotfixInject(string injectAssemblyPath, string xluaAssemblyPath, string genAssemblyPath, IEnumerable<string> searchDirectorys, string idMapFilePath, Dictionary<string, int> hotfixConfig)
+        // genAssemblyPaths: the assemblies holding generated code, separated by ';'
+        public static void HotfixInject(string injectAssemblyPath, string xluaAssemblyPath, string genAssemblyPaths, IEnumerable<string> searchDirectorys, string idMapFilePath, Dictionary<string, int> hotfixConfig)
         {
             AssemblyDefinition injectAssembly = null;
             AssemblyDefinition xluaAssembly = null;
-            AssemblyDefinition genAssembly = null;
+            List<AssemblyDefinition> genAssemblies = new List<AssemblyDefinition>();
             try
             {
                 injectAssembly = readAssembly(injectAssemblyPath);
@@ -873,11 +879,14 @@ namespace XLua
 
                 xluaAssembly = (injectAssemblyPath == xluaAssemblyPath || injectAssembly.MainModule.FullyQualifiedName == xluaAssemblyPath) ? 
                     injectAssembly : readAssembly(xluaAssemblyPath);
-                genAssembly = (injectAssemblyPath == genAssemblyPath || injectAssembly.MainModule.FullyQualifiedName == genAssemblyPath) ?
-                    injectAssembly : readAssembly(genAssemblyPath);
+                foreach (var genAssemblyPath in (genAssemblyPaths ?? "").Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    genAssemblies.Add((injectAssemblyPath == genAssemblyPath || injectAssembly.MainModule.FullyQualifiedName == genAssemblyPath) ?
+                        injectAssembly : readAssembly(genAssemblyPath));
+                }
 
                 Hotfix hotfix = new Hotfix();
-                hotfix.Init(injectAssembly, xluaAssembly, genAssembly, searchDirectorys, hotfixConfig);
+                hotfix.Init(injectAssembly, xluaAssembly, genAssemblies, searchDirectorys, hotfixConfig);
 
                 //var hotfixDelegateAttributeType = assembly.MainModule.Types.Single(t => t.FullName == "XLua.HotfixDelegateAttribute");
                 var hotfixAttributeType = xluaAssembly.MainModule.Types.Single(t => t.FullName == "XLua.HotfixAttribute");
@@ -1229,7 +1238,9 @@ namespace XLua
 
             if (!isIntKey)
             {
-                injection = new VariableDefinition(invoke.DeclaringType);
+                // a bridge function takes the bridge, an adapting delegate is invoked on itself
+                var injectionType = invoke.Resolve().IsStatic ? delegateBridgeType : invoke.DeclaringType;
+                injection = new VariableDefinition(injectionType);
                 method.Body.Variables.Add(injection);
 
                 var luaDelegateName = getDelegateName(method);
@@ -1240,7 +1251,7 @@ namespace XLua
                 }
 
                 FieldDefinition fieldDefinition = new FieldDefinition(luaDelegateName, Mono.Cecil.FieldAttributes.Static | Mono.Cecil.FieldAttributes.Private,
-                    invoke.DeclaringType);
+                    injectionType);
                 type.Fields.Add(fieldDefinition);
                 fieldReference = fieldDefinition.GetGeneric();
             }
@@ -1282,7 +1293,6 @@ namespace XLua
                 {
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Ldc_I4, bridgeIndexByKey.Count));
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Call, delegateBridgeGetter));
-                    processor.InsertBefore(insertPoint, processor.Create(OpCodes.Castclass, delegateBridgeWrapType));
                 }
                 else
                 {
@@ -1425,7 +1435,6 @@ namespace XLua
                     processor.InsertBefore(insertPoint, jmpInstruction);
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Ldc_I4, bridgeIndexByKey.Count));
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Call, delegateBridgeGetter));
-                    processor.InsertBefore(insertPoint, processor.Create(OpCodes.Castclass, delegateBridgeWrapType));
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Stloc, injection));
                 }
                 else
@@ -1720,9 +1729,8 @@ namespace XLua
                 }
             }
 
-            var genCodeAssemblyPathInProject = GenRegistry.GenAssembly.ManifestModule.FullyQualifiedName;
-            var genCodeAssemblyFileName = Path.GetFileName(genCodeAssemblyPathInProject);
-            var genCodeAssemblyPath = Path.Combine(assemblyDir, genCodeAssemblyFileName);
+            var genCodeAssemblyPath = string.Join(";", (from assembly in GenRegistry.GenAssemblies
+                select Path.Combine(assemblyDir, Path.GetFileName(assembly.ManifestModule.FullyQualifiedName))).ToArray());
             List< string> args = new List<string>() { assembly_csharp_path, 
                 typeof(LuaEnv).Module.FullyQualifiedName,
                 genCodeAssemblyPath,

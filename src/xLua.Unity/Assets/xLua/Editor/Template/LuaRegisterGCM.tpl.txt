@@ -136,7 +136,8 @@ namespace XLua
 			};
 			
             XLua.GenRegistry.Register(
-                (reference, luaenv) => new XLua.DelegateBridge_Wrap(reference, luaenv),
+                typeof(XLua.DelegateBridge_Wrap),
+                XLua.DelegateBridge_Wrap.CreateDelegateCreators(),
                 extensionMethodMap,
                 StaticLuaCallbacks_Wrap.__tryArrayGet,
                 StaticLuaCallbacks_Wrap.__tryArraySet,

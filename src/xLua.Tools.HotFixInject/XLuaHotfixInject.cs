@@ -10,7 +10,7 @@ namespace XLua
     {
         public static void Useage()
         {
-            Console.WriteLine("XLuaHotfixInject assmbly_path xlua_assembly_path gencode_assembly_path id_map_file_path [cfg_assmbly2_path] [search_path1, search_path2 ...]");
+            Console.WriteLine("XLuaHotfixInject assmbly_path xlua_assembly_path gencode_assembly_paths id_map_file_path [cfg_assmbly2_path] [search_path1, search_path2 ...]");
         }
 
         public static void Main(string[] args)
@@ -25,7 +25,8 @@ namespace XLua
             {
                 var injectAssmblyPath = Path.GetFullPath(args[0]);
                 var xluaAssmblyPath = Path.GetFullPath(args[1]);
-                var genAssemblyPath = Path.GetFullPath(args[2]);
+                // one or more assemblies holding generated code, separated by ';'
+                var genAssemblyPath = string.Join(";", args[2].Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(p => Path.GetFullPath(p)).ToArray());
                 string cfg_append = null;
                 if (args.Length > 4)
                 {

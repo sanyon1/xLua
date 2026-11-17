@@ -120,7 +120,7 @@ local generic_arg_list, type_constraints = GenericArgumentList(type)
 %>
 namespace XLua
 {
-    public static partial class ObjectTranslator_Gen
+    internal static partial class ObjectTranslator_Gen
     {
         public static void __Register<%=v_type_name%><%=generic_arg_list%>(this ObjectTranslator thiz, RealStatePtr L) <%=type_constraints%>
         {

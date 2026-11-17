@@ -15,7 +15,7 @@ require "TemplateCommon"
 
 namespace XLua
 {
-    public static partial class CopyByValue_Gen
+    internal static partial class CopyByValue_Gen
     {
 		//-------------------------- CopyByValueBase ---------------------------------//
         public static bool Pack(IntPtr buff, int offset, byte field)

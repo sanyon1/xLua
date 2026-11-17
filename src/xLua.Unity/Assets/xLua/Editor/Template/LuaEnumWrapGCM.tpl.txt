@@ -17,7 +17,7 @@ local enum_or_op = debug.getmetatable(CS.System.Reflection.BindingFlags.Public).
 
 namespace XLua
 {
-	public static partial class ObjectTranslator_Gen
+	internal static partial class ObjectTranslator_Gen
     {
     <%ForEachCsList(types, function(type)
 	local fields = type2fields and type2fields[type] or type:GetFields(enum_or_op(CS.System.Reflection.BindingFlags.Public, CS.System.Reflection.BindingFlags.Static))

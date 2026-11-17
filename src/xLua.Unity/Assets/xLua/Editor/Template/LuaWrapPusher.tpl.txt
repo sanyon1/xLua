@@ -15,7 +15,7 @@ require "TemplateCommon"
 
 namespace XLua
 {
-    public static partial class ObjectTranslator_Gen
+    internal static partial class ObjectTranslator_Gen
     {
 		public static void Init(LuaEnv luaenv, ObjectTranslator translator)
 		{
@@ -47,7 +47,8 @@ namespace XLua
         %>static int <%=type_id_var_name%> = -1;<%if is_enum then%>
 		static int <%=enum_ref_var_name%> = -1;
         <%end%>
-        public static void Push<%=CSVariableName(type_info.Type)%>(this ObjectTranslator thiz, RealStatePtr L, <%=full_type_name%> val)
+        // Another generated assembly may have pushed the value, so reading one can come before the first push here.
+        static void Ensure<%=CSVariableName(type_info.Type)%>TypeID(ObjectTranslator thiz, RealStatePtr L)
         {
             if (<%=type_id_var_name%> == -1)
             {
@@ -61,6 +62,11 @@ namespace XLua
 				}
 				<%end%>
             }
+        }
+
+        public static void Push<%=CSVariableName(type_info.Type)%>(this ObjectTranslator thiz, RealStatePtr L, <%=full_type_name%> val)
+        {
+            Ensure<%=CSVariableName(type_info.Type)%>TypeID(thiz, L);
 			<%if is_enum then%>
 			if (LuaAPI.xlua_tryget_cachedud(L, (int)val, <%=enum_ref_var_name%>) == 1)
             {
@@ -99,6 +105,7 @@ namespace XLua
 		    LuaTypes type = LuaAPI.lua_type(L, index);
             if (type == LuaTypes.LUA_TUSERDATA )
             {
+			    Ensure<%=CSVariableName(type_info.Type)%>TypeID(thiz, L);
 			    if (LuaAPI.xlua_gettypeid(L, index) != <%=type_id_var_name%>)
 				{
 				    throw new Exception("invalid userdata for <%=full_type_name%>");
@@ -133,6 +140,7 @@ namespace XLua
 			<%else%>
             if (LuaAPI.lua_type(L, index) == LuaTypes.LUA_TUSERDATA)
             {
+			    Ensure<%=CSVariableName(type_info.Type)%>TypeID(thiz, L);
 			    if (LuaAPI.xlua_gettypeid(L, index) != <%=type_id_var_name%>)
 				{
 				    throw new Exception("invalid userdata for <%=full_type_name%>");
@@ -188,7 +196,7 @@ namespace XLua
         
     }
 	
-	public partial class StaticLuaCallbacks_Wrap
+	internal partial class StaticLuaCallbacks_Wrap
     {
 	    internal static bool __tryArrayGet(Type type, RealStatePtr L, ObjectTranslator translator, object obj, int index)
 		{

@@ -23,7 +23,7 @@ local has_return = (delegate.ReturnType.Name ~= "Void")
 namespace XLua.CSObjectWrap
 {
     using Utils = XLua.Utils;
-    public class <%=CSVariableName(type)%>Wrap
+    internal class <%=CSVariableName(type)%>Wrap
     {
 		public static void __Register(RealStatePtr L)
         {

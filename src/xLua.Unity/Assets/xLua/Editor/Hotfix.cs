@@ -278,6 +278,10 @@ namespace XLua
 
         private List<MethodDefinition> bridgeIndexByKey = null;
 
+        // IntKey ids index one list shared by every assembly at run time, so each injected
+        // assembly has to start where the previous one ended.
+        private int intKeyBase = 0;
+
         private bool isInjectAndGenTheSameAssembly = false;
 
         private int delegateId = 0;
@@ -322,6 +326,7 @@ namespace XLua
             //hotfixBridges = hotfixBridgesDef.Select(m => injectModule.TryImport(m)).ToList();
 
             bridgeIndexByKey = new List<MethodDefinition>();
+            int.TryParse(Environment.GetEnvironmentVariable("XLUA_HOTFIX_INTKEY_BASE"), out intKeyBase);
 
             var resolverOfInjectAssembly = injectAssembly.MainModule.AssemblyResolver as BaseAssemblyResolver;
             Action<string> addSearchDirectory = (string dir) =>
@@ -1274,7 +1279,7 @@ namespace XLua
                 Instruction firstInstruction;
                 if (isIntKey)
                 {
-                    firstInstruction = processor.Create(OpCodes.Ldc_I4, bridgeIndexByKey.Count);
+                    firstInstruction = processor.Create(OpCodes.Ldc_I4, intKeyBase + bridgeIndexByKey.Count);
                     processor.InsertBefore(insertPoint, firstInstruction);
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Call, hotfixFlagGetter));
                 }
@@ -1291,7 +1296,7 @@ namespace XLua
 
                 if (isIntKey)
                 {
-                    processor.InsertBefore(insertPoint, processor.Create(OpCodes.Ldc_I4, bridgeIndexByKey.Count));
+                    processor.InsertBefore(insertPoint, processor.Create(OpCodes.Ldc_I4, intKeyBase + bridgeIndexByKey.Count));
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Call, delegateBridgeGetter));
                 }
                 else
@@ -1428,12 +1433,12 @@ namespace XLua
                 Instruction jmpInstruction;
                 if (isIntKey)
                 {
-                    firstInstruction = processor.Create(OpCodes.Ldc_I4, bridgeIndexByKey.Count);
+                    firstInstruction = processor.Create(OpCodes.Ldc_I4, intKeyBase + bridgeIndexByKey.Count);
                     processor.InsertBefore(insertPoint, firstInstruction);
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Call, hotfixFlagGetter));
                     jmpInstruction = processor.Create(OpCodes.Brfalse, insertPoint);
                     processor.InsertBefore(insertPoint, jmpInstruction);
-                    processor.InsertBefore(insertPoint, processor.Create(OpCodes.Ldc_I4, bridgeIndexByKey.Count));
+                    processor.InsertBefore(insertPoint, processor.Create(OpCodes.Ldc_I4, intKeyBase + bridgeIndexByKey.Count));
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Call, delegateBridgeGetter));
                     processor.InsertBefore(insertPoint, processor.Create(OpCodes.Stloc, injection));
                 }
@@ -1603,7 +1608,7 @@ namespace XLua
             {
                 writer.WriteLine("return {");
                 var data = bridgeIndexByKey
-                    .Select((md, idx) => new { Method = md, Index = idx})
+                    .Select((md, idx) => new { Method = md, Index = idx + intKeyBase})
                     .GroupBy(info => info.Method.DeclaringType)
                     .ToDictionary(group => group.Key, group =>
                     {
@@ -1662,6 +1667,24 @@ namespace XLua
         public static void HotfixInject()
         {
             HotfixInject("./Library/ScriptAssemblies");
+        }
+
+        // The id after the highest one in an IntKey map file, 0 if there is none.
+        static int nextIntKey(string idMapFilePath)
+        {
+            int next = 0;
+            if (File.Exists(idMapFilePath))
+            {
+                // the ids are the lines made of nothing but numbers and commas
+                foreach (Match line in Regex.Matches(File.ReadAllText(idMapFilePath), @"^[\s\d,]*\d[\s\d,]*$", RegexOptions.Multiline))
+                {
+                    foreach (Match id in Regex.Matches(line.Value, @"\d+"))
+                    {
+                        next = Math.Max(next, int.Parse(id.Value) + 1);
+                    }
+                }
+            }
+            return next;
         }
 
         public static void HotfixInject(string assemblyDir)
@@ -1751,6 +1774,7 @@ namespace XLua
             }
             var injectAssemblyPaths = HotfixConfig.GetHotfixAssemblyPaths();
             var idMapFileNames = new List<string>();
+            int intKeyBase = 0;
             foreach (var injectAssemblyPath in injectAssemblyPaths)
             {
                 args[0] = Path.Combine(assemblyDir, Path.GetFileName(injectAssemblyPath));
@@ -1776,9 +1800,27 @@ namespace XLua
                 hotfix_injection.StartInfo.RedirectStandardOutput = true;
                 hotfix_injection.StartInfo.UseShellExecute = false;
                 hotfix_injection.StartInfo.CreateNoWindow = true;
+                hotfix_injection.StartInfo.EnvironmentVariables["XLUA_HOTFIX_INTKEY_BASE"] = intKeyBase.ToString();
                 hotfix_injection.Start();
                 UnityEngine.Debug.Log(hotfix_injection.StandardOutput.ReadToEnd());
                 hotfix_injection.WaitForExit();
+                intKeyBase = Math.Max(intKeyBase, nextIntKey(args[3]));
+            }
+
+            if (idMapFileNames.Count > 1)
+            {
+                // one map that covers every injected assembly, for xlua.util.auto_id_map
+                using (StreamWriter writer = new StreamWriter(CSObjectWrapEditor.GeneratorConfig.common_path + "Resources/hotfix_id_map.lua.txt"))
+                {
+                    writer.WriteLine("local map = {}");
+                    foreach (var idMapFileName in idMapFileNames)
+                    {
+                        var moduleName = Path.GetFileName(idMapFileName);
+                        moduleName = moduleName.Substring(0, moduleName.Length - ".lua.txt".Length);
+                        writer.WriteLine("for k, v in pairs(require '" + moduleName + "') do map[k] = v end");
+                    }
+                    writer.WriteLine("return map");
+                }
             }
 
             File.Delete(hotfix_cfg_in_editor);

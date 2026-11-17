@@ -27,6 +27,12 @@ namespace CSObjectWrapEditor
         public static string common_path = "./Gen/";
 #else
         public static string common_path = Application.dataPath + "/XLua/Gen/";
+
+        // Generated code for the types of an assembly definition under Assets that references xLua goes
+        // into this folder next to its .asmdef, so it is compiled into that assembly. Everything else
+        // (engine and system types, assemblies without a definition file) goes to common_path.
+        public static bool gen_per_assembly = true;
+        public static string assembly_gen_folder = "XLuaGen";
 #endif
 
         static GeneratorConfig()
@@ -1590,10 +1596,13 @@ namespace CSObjectWrapEditor
             templateCache.Clear();
             Directory.CreateDirectory(save_path);
             GenWrap(wraps, save_path);
-            GenWrapPusher(gc_optimze_list.Concat(wraps.Where(type=>type.IsEnum)).Distinct(), save_path);
+            GenWrapPusher(gc_optimze_list.Concat(pusher_enum_types ?? wraps.Where(type=>type.IsEnum)).Distinct(), save_path);
             GenPackUnpack(gc_optimze_list.Where(type => !type.IsPrimitive && SizeOf(type) != -1), save_path);
             GenInterfaceBridge(itf_bridges, save_path);
         }
+
+        // The enums to generate push/get code for when it is not just the wrapped ones of this run.
+        static IEnumerable<Type> pusher_enum_types = null;
 
         public static void GenCodeForClass(bool minimum = false)
         {
@@ -1658,17 +1667,62 @@ namespace CSObjectWrapEditor
             }
 #endif
             var start = DateTime.Now;
-            Directory.CreateDirectory(GeneratorConfig.common_path);
             GetGenConfig(XLua.Utils.GetAllTypes());
             luaenv.DoString("require 'TemplateCommon'");
             var gen_push_types_setter = luaenv.Global.Get<LuaFunction>("SetGenPushAndUpdateTypes");
-            gen_push_types_setter.Call(GCOptimizeList.Where(t => !t.IsPrimitive && SizeOf(t) != -1).Concat(LuaCallCSharp.Where(t => t.IsEnum)).Distinct().ToList());
             var xlua_classes_setter = luaenv.Global.Get<LuaFunction>("SetXLuaClasses");
             xlua_classes_setter.Call(XLua.Utils.GetAllTypes().Where(t => t.Namespace == "XLua").ToList());
-            GenDelegateBridges(XLua.Utils.GetAllTypes(false));
-            GenEnumWraps();
-            GenCodeForClass();
-            GenLuaRegister();
+
+            // Each unit is one folder compiled into one assembly. The normal generation runs once per
+            // unit with the config narrowed to what belongs there.
+            var plan = GenUnitPlan.Create(GeneratorConfig.common_path, GeneratorConfig.gen_per_assembly);
+            var all_lua_call_csharp = LuaCallCSharp;
+            var all_csharp_call_lua = CSharpCallLua;
+            var all_gc_optimize = GCOptimizeList;
+            var all_reflection_use = ReflectionUse;
+            var all_hotfix_cfg = HotfixCfg;
+            var default_path = GeneratorConfig.common_path;
+            var all_types = XLua.Utils.GetAllTypes(false).ToList();
+            try
+            {
+                foreach (var unit in plan.Units)
+                {
+                    LuaCallCSharp = all_lua_call_csharp.Where(unit.Owns).ToList();
+                    CSharpCallLua = all_csharp_call_lua.Where(unit.Owns).ToList();
+                    // value types are pushed by code in the same unit, so every unit carries its own
+                    // copy for each one it can see
+                    GCOptimizeList = all_gc_optimize.Where(unit.Sees).ToList();
+                    pusher_enum_types = all_lua_call_csharp.Where(t => t.IsEnum && unit.Sees(t)).ToList();
+                    ReflectionUse = unit.IsDefault ? all_reflection_use : new List<Type>();
+                    HotfixCfg = all_hotfix_cfg.Where(kv => unit.Owns(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+                    var hotfix_check_types = all_types.Where(unit.Owns).ToList();
+
+                    if (!unit.IsDefault && LuaCallCSharp.Count == 0 && CSharpCallLua.Count == 0 && HotfixCfg.Count == 0
+                        && !hotfix_check_types.Any(t => isDefined(t, typeof(HotfixAttribute))))
+                    {
+                        clear(unit.Path);
+                        continue;
+                    }
+
+                    GeneratorConfig.common_path = unit.Path;
+                    Directory.CreateDirectory(unit.Path);
+                    gen_push_types_setter.Call(GCOptimizeList.Where(t => !t.IsPrimitive && SizeOf(t) != -1).Concat(pusher_enum_types).Distinct().ToList());
+                    GenDelegateBridges(hotfix_check_types);
+                    GenEnumWraps();
+                    GenCodeForClass();
+                    GenLuaRegister();
+                }
+            }
+            finally
+            {
+                LuaCallCSharp = all_lua_call_csharp;
+                CSharpCallLua = all_csharp_call_lua;
+                GCOptimizeList = all_gc_optimize;
+                ReflectionUse = all_reflection_use;
+                HotfixCfg = all_hotfix_cfg;
+                pusher_enum_types = null;
+                GeneratorConfig.common_path = default_path;
+            }
             callCustomGen();
             Debug.Log("finished! use " + (DateTime.Now - start).TotalMilliseconds + " ms");
             AssetDatabase.Refresh();
@@ -1734,7 +1788,10 @@ namespace CSObjectWrapEditor
         [MenuItem("XLua/Clear Generated Code", false, 2)]
         public static void ClearAll()
         {
-            clear(GeneratorConfig.common_path);
+            foreach (var unit in GenUnitPlan.Create(GeneratorConfig.common_path, true).Units)
+            {
+                clear(unit.Path);
+            }
         }
 
         public delegate IEnumerable<CustomGenTask> GetTasks(LuaEnv lua_env, UserConfig user_cfg);

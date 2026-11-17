@@ -16,7 +16,7 @@ require "TemplateCommon"
 namespace XLua
 {
     // Static so that every assembly can carry its own bridge functions; the bridge is the first argument.
-    public static partial class DelegateBridge_Wrap
+    internal static partial class DelegateBridge_Wrap
     {
 		<%
 		ForEachCsList(delegates_groups, function(delegates_group, group_idx)

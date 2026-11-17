@@ -27,7 +27,7 @@ namespace XLua.CSObjectWrap
 		end
 	end)
 	%>
-    public class <%=CSVariableName(type)%>Wrap
+    internal class <%=CSVariableName(type)%>Wrap
     {
 		public static void __Register(RealStatePtr L)
         {

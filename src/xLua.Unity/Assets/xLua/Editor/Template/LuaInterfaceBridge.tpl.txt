@@ -17,7 +17,7 @@ require "TemplateCommon"
 
 namespace XLua.CSObjectWrap
 {
-    public class <%=CSVariableName(type)%>Bridge : LuaBase, <%=CsFullTypeName(type)%>
+    internal class <%=CSVariableName(type)%>Bridge : LuaBase, <%=CsFullTypeName(type)%>
     {
     	RealStatePtr rawL;
 	    public static LuaBase __Create(int reference, LuaEnv luaenv)

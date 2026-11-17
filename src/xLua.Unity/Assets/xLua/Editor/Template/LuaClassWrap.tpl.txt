@@ -120,7 +120,7 @@ local generic_arg_list, type_constraints = GenericArgumentList(type)
 namespace XLua.CSObjectWrap
 {
     using Utils = XLua.Utils;
-    public class <%=CSVariableName(type)%>Wrap<%=generic_arg_list%> <%=type_constraints%>
+    internal class <%=CSVariableName(type)%>Wrap<%=generic_arg_list%> <%=type_constraints%>
     {
         public static void __Register(RealStatePtr L)
         {

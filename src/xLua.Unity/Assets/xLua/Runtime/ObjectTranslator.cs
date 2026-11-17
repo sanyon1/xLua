@@ -1605,7 +1605,8 @@ namespace XLua
             Func<RealStatePtr, int, T> org_get;
             if (tryGetPushFuncByType(type, out org_push) || tryGetGetFuncByType(type, out org_get))
             {
-                throw new InvalidOperationException("push or get of " + type + " has register!");
+                // several generated assemblies may carry code for the same type; the first one is used
+                return;
             }
             push_func_with_type.Add(type, push);
             get_func_with_type.Add(type, new Func<RealStatePtr, int, T>((L, idx) => {

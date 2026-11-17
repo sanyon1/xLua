@@ -17,7 +17,7 @@ require "TemplateCommon"
 
 namespace XLua.CSObjectWrap
 {
-    public class XLua_Gen_Initer_Register__
+    internal class XLua_Gen_Initer_Register__
 	{
         <%
         local split_method_perfix = 'wrapInit'
@@ -87,7 +87,7 @@ namespace XLua
 #if !XLUA_GENERAL
 	[UnityEngine.Scripting.Preserve]
 #endif
-	public static class XLuaGenRegister
+	internal static class XLuaGenRegister
     {
 	    <%
 		local type_to_methods = {}

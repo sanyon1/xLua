@@ -1,0 +1,5 @@
+{
+    "name": "Game2",
+    "references": [ "XLua.Unity", "Game" ],
+    "autoReferenced": true
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Builds XLuaHotfixInject.exe from the current sources for the hotfix verification. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>XLuaHotfixInject</AssemblyName>
+    <DefineConstants>HOTFIX_ENABLE;XLUA_GENERAL</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>CS0618;CS0649;CS0414;CS0168;CS0219</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../src/xLua.Unity/Assets/xLua/Editor/Hotfix.cs" />
+    <Compile Include="../../../src/xLua.Tools.HotFixInject/XLuaHotfixInject.cs" />
+    <Reference Include="Mono.Cecil"><HintPath>../../../src/lib/Mono.Cecil.dll</HintPath></Reference>
+    <Reference Include="Mono.Cecil.Mdb"><HintPath>../../../src/lib/Mono.Cecil.Mdb.dll</HintPath></Reference>
+    <Reference Include="Mono.Cecil.Pdb"><HintPath>../../../src/lib/Mono.Cecil.Pdb.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

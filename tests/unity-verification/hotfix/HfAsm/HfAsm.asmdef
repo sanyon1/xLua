@@ -1,0 +1,5 @@
+{
+    "name": "HfAsm",
+    "references": [ "XLua.Unity" ],
+    "autoReferenced": true
+}

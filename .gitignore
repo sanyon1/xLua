@@ -36,3 +36,7 @@ src/xLua.Native/luajit-2.1.0b2/src/lua51.lib
 src/xLua.Native/luajit-2.1.0b2/src/luajit.exe
 src/xLua.Native/luajit-2.1.0b2/src/luajit.exp
 src/xLua.Native/luajit-2.1.0b2/src/luajit.lib
+
+# .NET build output
+/tests/unity-verification/injector/bin
+/tests/unity-verification/injector/obj

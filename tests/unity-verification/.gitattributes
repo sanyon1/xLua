@@ -1,0 +1,2 @@
+# run.sh is executed by bash, which does not accept CRLF line endings
+*.sh text eol=lf

@@ -191,7 +191,8 @@ namespace CSObjectWrapEditor
                     {
                         continue;
                     }
-                    if (!assembly.assemblyReferences.Any(r => r.name == xluaAssembly))
+                    if (!assembly.assemblyReferences.Any(r => r.name == xluaAssembly)
+                        && !assembly.compiledAssemblyReferences.Any(r => System.IO.Path.GetFileNameWithoutExtension(r) == xluaAssembly))
                     {
                         continue;
                     }

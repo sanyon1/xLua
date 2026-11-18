@@ -40,10 +40,8 @@ namespace XLua
 			%><%=CsFullTypeName(parameter.ParameterType)%> p<%=pi%><% 
 		end) %>)
 		{
-#if THREAD_SAFE || HOTFIX_ENABLE
             lock (__bridge.Env.luaEnvLock)
             {
-#endif
                 RealStatePtr L = __bridge.RawL;
                 int errFunc = LuaAPI.pcall_prepare(L, __bridge.ErrorFuncRef, __bridge.LuaReference);
                 <%if CallNeedTranslator(delegate, "") then %>ObjectTranslator translator = __bridge.Env.translator;<%end%>
@@ -68,9 +66,7 @@ namespace XLua
                 <%if has_return then %><%=GetCasterStatement(delegate.ReturnType, "errFunc + 1", "__gen_ret", true)%>;<% end%>
                 LuaAPI.lua_settop(L, errFunc - 1);
                 <%if has_return then %>return  __gen_ret;<% end%>
-#if THREAD_SAFE || HOTFIX_ENABLE
             }
-#endif
 		}
         <%end)%>
 		

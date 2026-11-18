@@ -11,7 +11,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 : "${WORK:?set WORK to an empty scratch directory}"
 UNITY="${UNITY:-/c/Program Files/Unity/Hub/Editor/2021.2.1f1/Editor/Unity.exe}"
-UNITY6="${UNITY6:-/c/Program Files/Unity/Hub/Editor/6000.2.6f2/Editor/Unity.exe}"
+UNITY6="${UNITY6:-/c/Program Files/Unity/Hub/Editor/6000.6.7f1/Editor/Unity.exe}"
 SUITES="${*:-hotfix unit consumer}"
 mkdir -p "$WORK"
 

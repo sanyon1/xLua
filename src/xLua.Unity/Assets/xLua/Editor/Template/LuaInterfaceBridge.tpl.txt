@@ -53,10 +53,8 @@ namespace XLua.CSObjectWrap
 			%><%=CsFullTypeName(parameter.ParameterType)%> <%=parameter.Name%><% 
 		end) %>)
 		{
-#if THREAD_SAFE || HOTFIX_ENABLE
             lock (luaEnv.luaEnvLock)
             {
-#endif
 				RealStatePtr L = this.rawL;
 				int err_func = LuaAPI.load_error_func(L, luaEnv.errorFuncRef);
 				<%if CallNeedTranslator(method, "") then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -98,9 +96,7 @@ namespace XLua.CSObjectWrap
 				<%if has_return then %><%=GetCasterStatement(method.ReturnType, "err_func + 1", "__gen_ret", true)%>;<% end%>
 				LuaAPI.lua_settop(L, err_func - 1);
 				<%if has_return then %>return  __gen_ret;<% end%>
-#if THREAD_SAFE || HOTFIX_ENABLE
             }
-#endif
 		}
         <%end)%>
 
@@ -112,10 +108,8 @@ namespace XLua.CSObjectWrap
             <%if property.CanRead then%>
             get 
             {
-#if THREAD_SAFE || HOTFIX_ENABLE
                 lock (luaEnv.luaEnvLock)
                 {
-#endif
 					RealStatePtr L = this.rawL;
 					int oldTop = LuaAPI.lua_gettop(L);
 					<%if not JustLuaType(property.PropertyType) then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -128,18 +122,14 @@ namespace XLua.CSObjectWrap
 					<%=GetCasterStatement(property.PropertyType, "-1", "__gen_ret", true)%>;
 					LuaAPI.lua_pop(L, 2);
 					return __gen_ret;
-#if THREAD_SAFE || HOTFIX_ENABLE
                 }
-#endif
             }
             <%end%>
             <%if property.CanWrite then%>
             set
             {
-#if THREAD_SAFE || HOTFIX_ENABLE
                 lock (luaEnv.luaEnvLock)
                 {
-#endif
 					RealStatePtr L = this.rawL;
 					int oldTop = LuaAPI.lua_gettop(L);
 					<%if not JustLuaType(property.PropertyType) then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -151,9 +141,7 @@ namespace XLua.CSObjectWrap
 						luaEnv.ThrowExceptionFromError(oldTop);
 					}
 					LuaAPI.lua_pop(L, 1);
-#if THREAD_SAFE || HOTFIX_ENABLE
                 }
-#endif
             }
             <%end%>
         }
@@ -164,10 +152,8 @@ namespace XLua.CSObjectWrap
 		{<%local parameters = event:GetAddMethod():GetParameters()%>
 			add
 			{
-#if THREAD_SAFE || HOTFIX_ENABLE
 				lock (luaEnv.luaEnvLock)
 				{
-#endif
 					RealStatePtr L = this.rawL;
 					int err_func = LuaAPI.load_error_func(L, luaEnv.errorFuncRef);
 					<%if CallNeedTranslator(event:GetAddMethod(), "") then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -200,17 +186,13 @@ namespace XLua.CSObjectWrap
 						luaEnv.ThrowExceptionFromError(err_func - 1);
 				
 					LuaAPI.lua_settop(L, err_func - 1);
-#if THREAD_SAFE || HOTFIX_ENABLE
 				}
-#endif
 			}
 
 			remove
 			{
-#if THREAD_SAFE || HOTFIX_ENABLE
 				lock (luaEnv.luaEnvLock)
 				{
-#endif
 					RealStatePtr L = this.rawL;
 					int err_func = LuaAPI.load_error_func(L, luaEnv.errorFuncRef);
 					<%if CallNeedTranslator(event:GetRemoveMethod(), "") then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -243,9 +225,7 @@ namespace XLua.CSObjectWrap
 						luaEnv.ThrowExceptionFromError(err_func - 1);
 				
 					LuaAPI.lua_settop(L, err_func - 1);
-#if THREAD_SAFE || HOTFIX_ENABLE
 				}
-#endif
 			}
 		}
         <%end)%>
@@ -268,10 +248,8 @@ namespace XLua.CSObjectWrap
 		%>
 		    get
 			{
-#if THREAD_SAFE || HOTFIX_ENABLE
 				lock (luaEnv.luaEnvLock)
 				{
-#endif
 					RealStatePtr L = this.rawL;
 					int err_func = LuaAPI.load_error_func(L, luaEnv.errorFuncRef);
 					<%if CallNeedTranslator(method, "") then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -313,9 +291,7 @@ namespace XLua.CSObjectWrap
 					<%if has_return then %><%=GetCasterStatement(method.ReturnType, "err_func + 1", "__gen_ret", true)%>;<% end%>
 					LuaAPI.lua_settop(L, err_func - 1);
 					<%if has_return then %>return  __gen_ret;<% end%>
-#if THREAD_SAFE || HOTFIX_ENABLE
 				}
-#endif
 			}
 		<%end%>
 		<%if indexer:GetSetMethod() then
@@ -331,10 +307,8 @@ namespace XLua.CSObjectWrap
 		%>
 			set
 			{
-#if THREAD_SAFE || HOTFIX_ENABLE
 				lock (luaEnv.luaEnvLock)
 				{
-#endif
 					RealStatePtr L = this.rawL;
 					int err_func = LuaAPI.load_error_func(L, luaEnv.errorFuncRef);
 					<%if CallNeedTranslator(method, "") then %>ObjectTranslator translator = luaEnv.translator;<%end%>
@@ -376,9 +350,7 @@ namespace XLua.CSObjectWrap
 					<%if has_return then %><%=GetCasterStatement(method.ReturnType, "err_func + 1", "__gen_ret", true)%>;<% end%>
 					LuaAPI.lua_settop(L, err_func - 1);
 					<%if has_return then %>return  __gen_ret;<% end%>
-#if THREAD_SAFE || HOTFIX_ENABLE
 				}
-#endif
 			} 
 		<%end%>
 		}

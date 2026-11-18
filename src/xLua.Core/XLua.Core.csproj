@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The xLua runtime without any Unity dependency. It is used as a NuGet package by .NET
+    projects and as a prebuilt assembly by the Unity package, which adds the Unity specifics.
+
+    Hotfix support is always compiled in and THREAD_SAFE is off. Building with
+    -p:XLuaStaticLink=true produces the variant for platforms that link the native
+    library into the executable (iOS, tvOS). Adding -p:XLuaNoSocket=true leaves out
+    luasocket for the ones whose native library does not have it (WebGL, Switch).
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>XLua.Core</AssemblyName>
+    <RootNamespace>XLua</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <DefineConstants>XLUA_GENERAL;NET_STANDARD_2_0;HOTFIX_ENABLE</DefineConstants>
+    <DefineConstants Condition="'$(XLuaStaticLink)' == 'true'">$(DefineConstants);XLUA_STATIC_LINK</DefineConstants>
+    <DefineConstants Condition="'$(XLuaNoSocket)' == 'true'">$(DefineConstants);XLUA_NO_SOCKET</DefineConstants>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>portable</DebugType>
+    <NoWarn>CS0618;CS0649;CS0414;CS0168;CS0219;CS0162;CS0109;CS0108;CS0436</NoWarn>
+
+    <PackageId>XLua.Core</PackageId>
+    <Version>2.1.16</Version>
+    <Description>xLua runtime for .NET: Lua scripting for C# with generated bindings and hotfix. The native xlua library is not included.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/sanyon1/xLua</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

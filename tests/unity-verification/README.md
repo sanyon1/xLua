@@ -16,7 +16,7 @@ WORK=/c/some/empty/dir ./run.sh hotfix unit  # only some
 ```
 
 `UNITY` (default: 2021.2.1f1) is the editor used by `hotfix` and `unit`, `UNITY6` (default:
-6000.2.6f2) the one used by `consumer`. Both need the Windows IL2CPP module. `hotfix` also needs
+6000.6.7f1) the one used by `consumer`. Both need the Windows IL2CPP module. `hotfix` also needs
 the .NET SDK to build the injector. A full run takes roughly half an hour.
 
 ## Suites
